@@ -1,0 +1,10 @@
+@inherits AppStateComponent
+
+<CascadingValue Value="State.Settings">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

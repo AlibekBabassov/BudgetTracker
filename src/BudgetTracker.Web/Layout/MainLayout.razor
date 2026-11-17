@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AppState State
+@inject IBrowser Browser
+
+<AppSettingsProvider>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="app-shell">
+        <NavMenu />
+
+        <main class="app-main" id="main">
+            @if(State.IsLoaded && State.LoadWarning is not null){
+                <AlertBanner Kind="warning" Message="@State.LoadWarning" OnDismiss="State.DismissLoadWarning" />
+            }
+
+            @if(State.IsLoaded && State.StorageError is not null){
+                <AlertBanner Kind="danger" Message="@State.StorageError" OnDismiss="State.DismissStorageError" />
+            }
+
+            @if(State.IsLoaded){
+                <div class="page">@Body</div>
+            }else{
+                <p class="loading" role="status">Loading your budget…</p>
+            }
+        </main>
+    </div>
+</AppSettingsProvider>
+
+@code {
+    private string? _appliedTheme;
+
+    protected override async Task OnInitializedAsync(){
+        State.OnChange += HandleStateChanged;
+        await State.InitializeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender){
+        if(State.IsLoaded && _appliedTheme != State.Settings.Theme){
+            _appliedTheme = State.Settings.Theme;
+            await Browser.SetThemeAsync(_appliedTheme);
+        }
+    }
+
+    private void HandleStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.OnChange -= HandleStateChanged;
+}

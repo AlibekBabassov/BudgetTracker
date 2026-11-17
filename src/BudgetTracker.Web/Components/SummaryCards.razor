@@ -1,0 +1,21 @@
+<div class="cards">
+    <div class="card stat">
+        <span class="stat-label">Income</span>
+        <MoneyText Value="Summary.Income" Class="stat-value income" />
+    </div>
+    <div class="card stat">
+        <span class="stat-label">Expenses</span>
+        <MoneyText Value="Summary.Expense" Class="stat-value expense" />
+    </div>
+    <div class="card stat">
+        <span class="stat-label">Balance</span>
+        <MoneyText Value="Summary.Balance" Class="@BalanceClass" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public MonthSummary Summary { get; set; } = new(0, 0);
+
+    private string BalanceClass => Summary.Balance < 0 ? "stat-value expense" : "stat-value";
+}

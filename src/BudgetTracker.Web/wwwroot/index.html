@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>Budget Tracker</title>
+    <base href="/" />
+    <meta name="description" content="Budget tracker: record income and expenses, see monthly reports and keep category limits." />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <script>
+        try {
+            var savedTheme = localStorage.getItem('budget-tracker.theme');
+            if (savedTheme) { document.documentElement.setAttribute('data-theme', savedTheme); }
+        } catch (e) { }
+    </script>
+    <script src="js/interop.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <p class="boot">Loading Budget Tracker…</p>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unexpected error occurred.
+        <a href="" class="reload">Reload</a>
+        <a href="#" class="dismiss" aria-label="Dismiss">✕</a>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        document.querySelector('#blazor-error-ui .dismiss').addEventListener('click', function (e) {
+            e.preventDefault();
+            document.getElementById('blazor-error-ui').style.display = 'none';
+        });
+    </script>
+</body>
+
+</html>

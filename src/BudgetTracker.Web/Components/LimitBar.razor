@@ -1,0 +1,41 @@
+<div class="limit limit-@LevelClass">
+    <div class="limit-head">
+        <strong>@Status.Category</strong>
+        <span class="limit-amounts">
+            <MoneyText Value="Status.Spent" /> / <MoneyText Value="Status.Limit" />
+        </span>
+        @if(OnRemove.HasDelegate){
+            <button type="button" class="btn-icon" aria-label="Remove limit for @Status.Category"
+                    @onclick="() => OnRemove.InvokeAsync(Status.Category)">✕</button>
+        }
+    </div>
+
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+         aria-valuenow="@BarPercent" aria-label="@Status.Category budget used">
+        <div class="progress-fill" style="width:@(BarPercent)%"></div>
+    </div>
+
+    <p class="limit-note">
+        @if(Status.Level == LimitLevel.Exceeded){
+            <span>Over the limit by </span><MoneyText Value="-Status.Remaining" />
+        }else if(Status.Level == LimitLevel.Warning){
+            <span>@RealPercent% used, only </span><MoneyText Value="Status.Remaining" /><span> left</span>
+        }else{
+            <MoneyText Value="Status.Remaining" /><span> left</span>
+        }
+    </p>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public LimitStatus Status { get; set; } = new("", 0, 0, LimitLevel.Ok);
+
+    [Parameter]
+    public EventCallback<string> OnRemove { get; set; }
+
+    private string LevelClass => Status.Level.ToString().ToLowerInvariant();
+
+    private int RealPercent => (int)Math.Round(Status.Ratio * 100);
+
+    private int BarPercent => Math.Min(100, RealPercent);
+}

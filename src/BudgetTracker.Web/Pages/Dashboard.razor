@@ -1,0 +1,71 @@
+@page "/"
+@inherits AppStateComponent
+
+<PageTitle>Dashboard · Budget Tracker</PageTitle>
+
+@{
+    var month = State.SelectedMonth;
+    var summary = ReportCalculator.Summary(State.Transactions, month);
+    var expenses = ReportCalculator.ByCategory(State.Transactions, month, TransactionType.Expense);
+    var alerts = BudgetCheck.Evaluate(State.Transactions, State.Limits, month)
+        .Where(s => s.Level != LimitLevel.Ok)
+        .ToList();
+    var latest = new TransactionFilter().Apply(State.Transactions).Take(5).ToList();
+    var currency = State.Settings.Currency;
+}
+
+<div class="page-head">
+    <h1>Dashboard</h1>
+    <MonthPicker Month="month" OnShift="ShiftMonth" />
+</div>
+
+@if(State.Transactions.Count == 0){
+    <section class="card empty-state">
+        <h2>Welcome! Let's add your first transaction</h2>
+        <p>Record what you earn and spend. Everything stays in your browser.</p>
+        <a class="btn btn-primary" href="transactions">Add a transaction</a>
+    </section>
+}
+
+<SummaryCards Summary="summary" />
+
+@foreach(var alert in alerts){
+    <AlertBanner Kind="@(alert.Level == LimitLevel.Exceeded ? "danger" : "warning")"
+                 Message="@AlertText(alert, currency)" />
+}
+
+<div class="grid-2">
+    <section class="card" aria-labelledby="spend-title">
+        <h2 id="spend-title">Spending by category</h2>
+        <CategoryChart Data="expenses" />
+    </section>
+
+    <section class="card" aria-labelledby="latest-title">
+        <h2 id="latest-title">Latest transactions</h2>
+        @if(latest.Count == 0){
+            <p class="muted">Nothing here yet.</p>
+        }else{
+            <ul class="tx-list">
+                @foreach(var t in latest){
+                    <li @key="t.Id">
+                        <div>
+                            <strong>@t.Category</strong>
+                            <span class="muted tx-note">@(string.IsNullOrEmpty(t.Note) ? Display.Date(t.Date) : $"{t.Note} · {Display.Date(t.Date)}")</span>
+                        </div>
+                        <MoneyText Value="t.Amount" Kind="t.Type" Signed="true" />
+                    </li>
+                }
+            </ul>
+            <a class="link" href="transactions">See all transactions</a>
+        }
+    </section>
+</div>
+
+@code {
+    private void ShiftMonth(int months) => State.ShiftMonth(months);
+
+    private static string AlertText(LimitStatus status, string currency) =>
+        status.Level == LimitLevel.Exceeded
+            ? $"{status.Category}: over the monthly limit by {Display.Money(-status.Remaining, currency)}."
+            : $"{status.Category}: {Math.Round(status.Ratio * 100)}% of the monthly limit is used, {Display.Money(status.Remaining, currency)} left.";
+}

@@ -1,0 +1,60 @@
+@using System.Globalization
+
+@if(_slices.Count == 0){
+    <p class="muted">@EmptyText</p>
+}else{
+    <div class="donut-wrap">
+        <svg viewBox="0 0 42 42" class="donut" role="img" aria-label="@AriaLabel">
+            <title>@AriaLabel</title>
+            <circle class="donut-ring" cx="21" cy="21" r="15.9155" fill="none" stroke-width="6"></circle>
+            @foreach(var slice in _slices){
+                <circle cx="21" cy="21" r="15.9155" fill="none" stroke-width="6"
+                        stroke="@slice.Color"
+                        stroke-dasharray="@N(slice.Percent) @N(100 - slice.Percent)"
+                        stroke-dashoffset="@N(slice.Offset)"></circle>
+            }
+        </svg>
+
+        <ul class="legend">
+            @foreach(var slice in _slices){
+                <li>
+                    <span class="swatch" style="background:@slice.Color"></span>
+                    <span class="legend-name">@slice.Label</span>
+                    <MoneyText Value="slice.Total" />
+                    <span class="muted legend-pct">@(Math.Round(slice.Percent))%</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    private static readonly string[] Palette =
+        { "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#64748b" };
+
+    private sealed record Slice(string Label, decimal Total, double Percent, double Offset, string Color);
+
+    private readonly List<Slice> _slices = new();
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<CategoryTotal> Data { get; set; } = Array.Empty<CategoryTotal>();
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Spending by category";
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No data for this month yet.";
+
+    protected override void OnParametersSet(){
+        _slices.Clear();
+        var cumulative = 0.0;
+
+        for(var i = 0; i < Data.Count; i++){
+            var percent = (double)Data[i].Share * 100;
+            _slices.Add(new Slice(Data[i].Category, Data[i].Total, percent, 25 - cumulative, Palette[i % Palette.Length]));
+            cumulative += percent;
+        }
+    }
+
+    private static string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+}

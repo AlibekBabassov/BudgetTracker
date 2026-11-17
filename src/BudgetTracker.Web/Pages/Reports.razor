@@ -1,0 +1,40 @@
+@page "/reports"
+@inherits AppStateComponent
+
+<PageTitle>Reports · Budget Tracker</PageTitle>
+
+@{
+    var month = State.SelectedMonth;
+    var summary = ReportCalculator.Summary(State.Transactions, month);
+    var expenses = ReportCalculator.ByCategory(State.Transactions, month, TransactionType.Expense);
+    var income = ReportCalculator.ByCategory(State.Transactions, month, TransactionType.Income);
+    var trend = ReportCalculator.Trend(State.Transactions, month, 6);
+}
+
+<div class="page-head">
+    <h1>Reports</h1>
+    <MonthPicker Month="month" OnShift="ShiftMonth" />
+</div>
+
+<SummaryCards Summary="summary" />
+
+<div class="grid-2">
+    <section class="card" aria-labelledby="exp-title">
+        <h2 id="exp-title">Expenses by category</h2>
+        <CategoryChart Data="expenses" AriaLabel="Expenses by category" EmptyText="No expenses in this month." />
+    </section>
+
+    <section class="card" aria-labelledby="inc-title">
+        <h2 id="inc-title">Income by category</h2>
+        <CategoryChart Data="income" AriaLabel="Income by category" EmptyText="No income in this month." />
+    </section>
+</div>
+
+<section class="card" aria-labelledby="trend-title">
+    <h2 id="trend-title">Last 6 months</h2>
+    <TrendChart Points="trend" />
+</section>
+
+@code {
+    private void ShiftMonth(int months) => State.ShiftMonth(months);
+}

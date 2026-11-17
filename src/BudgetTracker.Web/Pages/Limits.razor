@@ -1,0 +1,91 @@
+@page "/limits"
+@inherits AppStateComponent
+
+<PageTitle>Limits · Budget Tracker</PageTitle>
+
+@{
+    var month = State.SelectedMonth;
+    var statuses = BudgetCheck.Evaluate(State.Transactions, State.Limits, month);
+}
+
+<div class="page-head">
+    <h1>Budget limits</h1>
+    <MonthPicker Month="month" OnShift="ShiftMonth" />
+</div>
+
+<section class="card" aria-labelledby="limit-form-title">
+    <h2 id="limit-form-title">Set a monthly limit</h2>
+    <p class="muted">Pick an expense category and the most you want to spend in it each month. You will see a warning at 80% and again when the limit is passed.</p>
+
+    <form class="form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
+        @if(_errors.Count > 0){
+            <AlertBanner Kind="danger" Message="Please fix the following:" Details="_errors" />
+        }
+
+        <div class="form-row">
+            <div class="field">
+                <label class="label" for="limit-category">Category</label>
+                <select id="limit-category" class="input" @bind="_category">
+                    @foreach(var category in Categories.ExpenseCategories){
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+
+            <div class="field">
+                <label class="label" for="limit-amount">Monthly limit (@State.Settings.Currency)</label>
+                <input id="limit-amount" class="input" type="text" inputmode="decimal" autocomplete="off"
+                       placeholder="0.00" @bind="_amountText" @bind:event="oninput" />
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save limit</button>
+        </div>
+    </form>
+</section>
+
+<section class="card" aria-labelledby="limit-list-title">
+    <h2 id="limit-list-title">Progress in @Display.Month(month)</h2>
+
+    @if(statuses.Count == 0){
+        <div class="empty-state">
+            <p>No limits yet. Add one above to get warned before you overspend.</p>
+        </div>
+    }else{
+        <div class="limits">
+            @foreach(var status in statuses){
+                <LimitBar @key="status.Category" Status="status" OnRemove="RemoveAsync" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private string _category = Categories.ExpenseCategories[0];
+    private string _amountText = "";
+    private readonly List<string> _errors = new();
+
+    private void ShiftMonth(int months) => State.ShiftMonth(months);
+
+    private async Task SubmitAsync(){
+        _errors.Clear();
+
+        if(!InputParser.TryAmount(_amountText, out var amount)){
+            _errors.Add("Limit must be a number, for example 250.");
+            return;
+        }
+
+        switch(await State.SetLimitAsync(_category, amount)){
+            case Result<BudgetLimit>.Ok:
+                _amountText = "";
+                break;
+
+            case Result<BudgetLimit>.Fail fail:
+                _errors.AddRange(fail.Errors);
+                break;
+        }
+    }
+
+    private Task RemoveAsync(string category) => State.RemoveLimitAsync(category);
+}

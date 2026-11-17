@@ -1,0 +1,50 @@
+@typeparam TItem
+
+@if(Items.Count == 0){
+    <div class="empty-state">
+        <p>@EmptyText</p>
+    </div>
+}else{
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>@HeaderTemplate</tr>
+            </thead>
+            <tbody>
+                @foreach(var item in Items.Take(_shown)){
+                    <tr @key="item">@RowTemplate(item)</tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if(Items.Count > _shown){
+        <button type="button" class="btn btn-block" @onclick="ShowMore">Show more (@(Items.Count - _shown) left)</button>
+    }
+}
+
+@code {
+    private int _shown;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+
+    [Parameter, EditorRequired]
+    public RenderFragment HeaderTemplate { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TItem> RowTemplate { get; set; } = default!;
+
+    [Parameter]
+    public string EmptyText { get; set; } = "Nothing to show yet.";
+
+    [Parameter]
+    public int PageSize { get; set; } = 25;
+
+    protected override void OnParametersSet(){
+        if(_shown < PageSize)
+            _shown = PageSize;
+    }
+
+    private void ShowMore() => _shown += PageSize;
+}

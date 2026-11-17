@@ -1,0 +1,42 @@
+<span class="@Css">@Text</span>
+
+@code {
+    [CascadingParameter]
+    public AppSettings? Settings { get; set; }
+
+    [Parameter, EditorRequired]
+    public decimal Value { get; set; }
+
+    [Parameter]
+    public TransactionType? Kind { get; set; }
+
+    [Parameter]
+    public bool Signed { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string Symbol => Settings?.Currency ?? AppSettings.Default.Currency;
+
+    private string Text {
+        get {
+            var money = Display.Money(Value, Symbol);
+            if(!Signed || Kind is null)
+                return money;
+
+            return (Kind == TransactionType.Income ? "+" : "−") + money;
+        }
+    }
+
+    private string Css {
+        get {
+            var kind = Kind switch {
+                TransactionType.Income => "income",
+                TransactionType.Expense => "expense",
+                _ => null
+            };
+
+            return string.Join(' ', new[] { "money", Class, kind }.Where(c => !string.IsNullOrEmpty(c)));
+        }
+    }
+}

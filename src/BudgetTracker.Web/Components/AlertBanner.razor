@@ -1,0 +1,29 @@
+<div class="alert alert-@Kind" role="@(Kind == "danger" ? "alert" : "status")">
+    <div class="alert-body">
+        <span>@Message</span>
+        @if(Details is not null && Details.Any()){
+            <ul class="alert-details">
+                @foreach(var detail in Details){
+                    <li>@detail</li>
+                }
+            </ul>
+        }
+    </div>
+    @if(OnDismiss.HasDelegate){
+        <button type="button" class="btn-icon" aria-label="Dismiss message" @onclick="OnDismiss">✕</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Kind { get; set; } = "info";
+
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = "";
+
+    [Parameter]
+    public IEnumerable<string>? Details { get; set; }
+
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+}

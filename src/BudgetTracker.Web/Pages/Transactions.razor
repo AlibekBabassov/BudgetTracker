@@ -1,0 +1,120 @@
+@page "/transactions"
+@inherits AppStateComponent
+@inject IBrowser Browser
+
+<PageTitle>Transactions · Budget Tracker</PageTitle>
+
+@{
+    var filter = new TransactionFilter(
+        Enum.TryParse<TransactionType>(_typeFilter, out var type) ? type : null,
+        _categoryFilter,
+        _search,
+        _monthOnly ? State.SelectedMonth : null);
+    var items = filter.Apply(State.Transactions);
+    var categories = Categories.ExpenseCategories
+        .Concat(Categories.IncomeCategories)
+        .Concat(State.Transactions.Select(t => t.Category))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+}
+
+<h1>Transactions</h1>
+
+<section class="card" aria-labelledby="form-title">
+    <h2 id="form-title">@(_editing is null ? "Add transaction" : "Edit transaction")</h2>
+    <TransactionForm Editing="_editing" Today="State.Today" Save="SaveAsync" OnSaved="Saved" OnCancel="CancelEdit" />
+</section>
+
+<section class="card" aria-labelledby="list-title">
+    <div class="list-head">
+        <h2 id="list-title">History <span class="muted">(@items.Count)</span></h2>
+    </div>
+
+    <div class="filters" role="search" aria-label="Filter transactions">
+        <select class="input" aria-label="Type" @bind="_typeFilter">
+            <option value="">All types</option>
+            <option value="Expense">Expenses</option>
+            <option value="Income">Income</option>
+        </select>
+
+        <select class="input" aria-label="Category" @bind="_categoryFilter">
+            <option value="">All categories</option>
+            @foreach(var category in categories){
+                <option value="@category">@category</option>
+            }
+        </select>
+
+        <input class="input" type="search" placeholder="Search notes…" aria-label="Search notes"
+               @bind="_search" @bind:event="oninput" />
+
+        <label class="check">
+            <input type="checkbox" @bind="_monthOnly" />
+            <span>@Display.Month(State.SelectedMonth) only</span>
+        </label>
+    </div>
+
+    <DataTable TItem="Transaction" Items="items" EmptyText="No transactions match your filters.">
+        <HeaderTemplate>
+            <th scope="col">Date</th>
+            <th scope="col">Category</th>
+            <th scope="col">Note</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+        </HeaderTemplate>
+        <RowTemplate Context="t">
+            <td data-label="Date">@Display.Date(t.Date)</td>
+            <td data-label="Category">@t.Category</td>
+            <td data-label="Note" class="note-cell">@t.Note</td>
+            <td data-label="Amount" class="num"><MoneyText Value="t.Amount" Kind="t.Type" Signed="true" /></td>
+            <td class="actions">
+                <button type="button" class="btn-link" @onclick="() => Edit(t)">Edit</button>
+                <button type="button" class="btn-link danger" @onclick="() => AskDelete(t)">Delete</button>
+            </td>
+        </RowTemplate>
+    </DataTable>
+</section>
+
+<ConfirmDialog Visible="_pendingDelete is not null"
+               Title="Delete this transaction?"
+               Message="@DeleteMessage"
+               OnConfirm="ConfirmDeleteAsync"
+               OnCancel="CancelDelete" />
+
+@code {
+    private Transaction? _editing;
+    private Transaction? _pendingDelete;
+    private string _typeFilter = "";
+    private string _categoryFilter = "";
+    private string _search = "";
+    private bool _monthOnly;
+
+    private string DeleteMessage => _pendingDelete is null
+        ? ""
+        : $"{_pendingDelete.Category}, {Display.Money(_pendingDelete.Amount, State.Settings.Currency)} on {Display.Date(_pendingDelete.Date)}. This cannot be undone.";
+
+    private Task<Result<Transaction>> SaveAsync(TransactionDraft draft) => State.SaveTransactionAsync(draft);
+
+    private void Saved(Transaction _) => _editing = null;
+
+    private void CancelEdit() => _editing = null;
+
+    private async Task Edit(Transaction transaction){
+        _editing = transaction;
+        await Browser.ScrollToTopAsync();
+    }
+
+    private void AskDelete(Transaction transaction) => _pendingDelete = transaction;
+
+    private void CancelDelete() => _pendingDelete = null;
+
+    private async Task ConfirmDeleteAsync(){
+        if(_pendingDelete is { } transaction){
+            _pendingDelete = null;
+            if(_editing?.Id == transaction.Id)
+                _editing = null;
+
+            await State.DeleteTransactionAsync(transaction.Id);
+        }
+    }
+}

@@ -1,0 +1,13 @@
+<div class="month-picker" role="group" aria-label="Choose month">
+    <button type="button" class="btn-icon" aria-label="Previous month" @onclick="() => OnShift.InvokeAsync(-1)">‹</button>
+    <strong class="month-label" aria-live="polite">@Display.Month(Month)</strong>
+    <button type="button" class="btn-icon" aria-label="Next month" @onclick="() => OnShift.InvokeAsync(1)">›</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DateOnly Month { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnShift { get; set; }
+}

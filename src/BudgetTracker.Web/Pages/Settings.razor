@@ -1,0 +1,61 @@
+@page "/settings"
+@inherits AppStateComponent
+
+<PageTitle>Settings · Budget Tracker</PageTitle>
+
+<h1>Settings</h1>
+
+<section class="card" aria-labelledby="look-title">
+    <h2 id="look-title">Appearance</h2>
+
+    <div class="form-row">
+        <div class="field">
+            <label class="label" for="theme">Theme</label>
+            <select id="theme" class="input" value="@State.Settings.Theme" @onchange="OnThemeChanged">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label class="label" for="currency">Currency symbol</label>
+            <select id="currency" class="input" value="@State.Settings.Currency" @onchange="OnCurrencyChanged">
+                @foreach(var currency in AppSettings.Currencies){
+                    <option value="@currency">@currency</option>
+                }
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="card" aria-labelledby="data-title">
+    <h2 id="data-title">Your data</h2>
+    <p class="muted">
+        Everything is stored only in this browser (@State.Transactions.Count transactions).
+    </p>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-danger" @onclick="() => _confirmClear = true">Delete all data</button>
+    </div>
+</section>
+
+<ConfirmDialog Visible="_confirmClear"
+               Title="Delete all data?"
+               Message="All transactions and limits will be removed from this browser. This cannot be undone."
+               ConfirmText="Delete everything"
+               OnConfirm="ClearAsync"
+               OnCancel="CancelClear" />
+
+@code {
+    private bool _confirmClear;
+    private Task OnThemeChanged(ChangeEventArgs e) => State.SetThemeAsync(e.Value?.ToString() ?? AppSettings.Light);
+
+    private Task OnCurrencyChanged(ChangeEventArgs e) => State.SetCurrencyAsync(e.Value?.ToString() ?? AppSettings.Default.Currency);
+
+    private void CancelClear() => _confirmClear = false;
+
+    private async Task ClearAsync(){
+        _confirmClear = false;
+        await State.ClearAllAsync();
+    }
+}

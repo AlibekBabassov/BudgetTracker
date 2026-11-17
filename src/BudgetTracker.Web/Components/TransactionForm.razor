@@ -1,0 +1,158 @@
+@using System.Globalization
+
+<form class="form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
+    @if(_errors.Count > 0){
+        <AlertBanner Kind="danger" Message="Please fix the following:" Details="_errors" />
+    }
+
+    <div class="field">
+        <span class="label" id="tx-type-label">Type</span>
+        <div class="segmented" role="group" aria-labelledby="tx-type-label">
+            <button type="button" class="seg @(_type == TransactionType.Expense ? "active" : "")"
+                    aria-pressed="@(_type == TransactionType.Expense ? "true" : "false")"
+                    @onclick="() => SetType(TransactionType.Expense)">Expense</button>
+            <button type="button" class="seg @(_type == TransactionType.Income ? "active" : "")"
+                    aria-pressed="@(_type == TransactionType.Income ? "true" : "false")"
+                    @onclick="() => SetType(TransactionType.Income)">Income</button>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="field">
+            <label class="label" for="tx-amount">Amount</label>
+            <input id="tx-amount" class="input" type="text" inputmode="decimal" autocomplete="off"
+                   placeholder="0.00" @bind="_amountText" @bind:event="oninput" />
+        </div>
+
+        <div class="field">
+            <label class="label" for="tx-category">Category</label>
+            <select id="tx-category" class="input" @bind="_category">
+                @foreach(var category in CategoryOptions){
+                    <option value="@category">@category</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="field">
+            <label class="label" for="tx-date">Date</label>
+            <input id="tx-date" class="input" type="date" value="@_dateText" @onchange="e => _dateText = e.Value?.ToString() ?? string.Empty" />
+        </div>
+
+        <div class="field">
+            <label class="label" for="tx-note">Note (optional)</label>
+            <input id="tx-note" class="input" type="text" maxlength="@TransactionValidator.MaxNoteLength"
+                   placeholder="e.g. lunch with friends" @bind="_note" />
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary" disabled="@_saving">@(Editing is null ? "Add transaction" : "Save changes")</button>
+        @if(Editing is not null){
+            <button type="button" class="btn" @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
+        }
+    </div>
+</form>
+
+@code {
+    private TransactionType _type = TransactionType.Expense;
+    private string _category = Categories.ExpenseCategories[0];
+    private string _amountText = "";
+    private string _dateText = "";
+    private string _note = "";
+    private bool _saving;
+    private bool _initialized;
+    private Transaction? _loadedFor;
+    private readonly List<string> _errors = new();
+
+    [Parameter]
+    public Transaction? Editing { get; set; }
+
+    [Parameter, EditorRequired]
+    public DateOnly Today { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<TransactionDraft, Task<Result<Transaction>>> Save { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<Transaction> OnSaved { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private IEnumerable<string> CategoryOptions {
+        get {
+            var options = Categories.ForType(_type);
+            return options.Contains(_category) || string.IsNullOrEmpty(_category)
+                ? options
+                : options.Append(_category);
+        }
+    }
+
+    protected override void OnParametersSet(){
+        if(_initialized && ReferenceEquals(Editing, _loadedFor))
+            return;
+
+        _initialized = true;
+        _loadedFor = Editing;
+        _errors.Clear();
+
+        if(Editing is { } existing){
+            _type = existing.Type;
+            _category = existing.Category;
+            _amountText = existing.Amount.ToString("0.##", CultureInfo.InvariantCulture);
+            _dateText = Display.InputDate(existing.Date);
+            _note = existing.Note;
+        }else{
+            ResetFields();
+        }
+    }
+
+    private void ResetFields(){
+        _type = TransactionType.Expense;
+        _category = Categories.ExpenseCategories[0];
+        _amountText = "";
+        _dateText = Display.InputDate(Today);
+        _note = "";
+    }
+
+    private void SetType(TransactionType type){
+        _type = type;
+        if(!Categories.ForType(type).Contains(_category))
+            _category = Categories.ForType(type)[0];
+    }
+
+    private async Task SubmitAsync(){
+        _errors.Clear();
+
+        if(!InputParser.TryAmount(_amountText, out var amount))
+            _errors.Add("Amount must be a number, for example 12.50.");
+
+        if(!InputParser.TryDate(_dateText, out var date))
+            _errors.Add("Enter a valid date.");
+
+        if(_errors.Count > 0)
+            return;
+
+        _saving = true;
+        try{
+            var draft = new TransactionDraft(Editing?.Id, _type, _category, amount, date, _note);
+
+            switch(await Save(draft)){
+                case Result<Transaction>.Ok ok:
+                    var wasEditing = Editing is not null;
+                    await OnSaved.InvokeAsync(ok.Value);
+                    if(!wasEditing)
+                        ResetFields();
+                    break;
+
+                case Result<Transaction>.Fail fail:
+                    _errors.AddRange(fail.Errors);
+                    break;
+            }
+        }finally{
+            _saving = false;
+        }
+    }
+}
