@@ -4,16 +4,14 @@ A web app for personal budgeting, written in **C# / Blazor WebAssembly** with a 
 Record income and expenses, see where the money goes each month, set category limits and get warned before you overspend.
 No account, no server: all data stays in your browser.
 
-Team: Babassov Alibek, Zhumagaliev Aktilek 
+Team: Babassov Alibek, Zhumagaliev Aktilek  https://alibekbabassov.github.io/BudgetTracker/reports
 
 ## Features
 
-| Area | What you get |
-|---|---|
-| Transactions | Add, edit and delete income and expenses (category, amount, date, note). Filter by type, category, month and text. |
-| Reports | Monthly summary, donut charts by category, a 6-month income vs expenses chart. |
-| Limits | A monthly limit per expense category with a warning at 80% and an alert when exceeded. |
-| Look & feel | Light and dark theme, currency symbol, responsive layout, keyboard and screen-reader friendly. |
+Transactions - Add, edit and delete income and expenses (category, amount, date, note). Filter by type, category, month and text. 
+Reports - Monthly summary, donut charts by category, a 6-month income vs expenses chart. 
+Limits - A monthly limit per expense category with a warning at 80% and an alert when exceeded. 
+Look & feel - Light and dark theme, currency symbol, responsive layout, keyboard and screen-reader friendly. 
 
 ## Technology
 
